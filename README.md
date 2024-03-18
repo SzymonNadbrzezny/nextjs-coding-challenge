@@ -21,26 +21,26 @@ You can do this however you see fit - you can email us a tarball, a pointer to d
 
 ## Challenge
 
-Develop an application that is a real-time writing competition ✍ platform️. Each person who visits a page can join a shared typing competition. On the main page, the application should render a current sentence to write, a time left to the next round, an input and a table with the current competitor results. Its structure can look like this:
+Develop an application that is a real-time writing competition ✍ platform️. Each person who visits a page can join a typing competition. On the main page, the application should render a current sentence to write, a time left to the next round, an input and a table with the current competitor results. Its structure can look like this:
 
-| Sentence           | Player      | Words per minute | Error rate |
-| :----------------- | :---------- | ---------------: | ---------: |
-| Lazy fox jumped \| | super typer |               30 |        0.1 |
+| Sentence           | Player name | Words per minute | Accuracy |
+| :----------------- | :---------- | ---------------: | -------: |
+| Lazy fox jumped \| | super typer |               30 |     0.97 |
 
 Please add the following features (as many as you can):
 
+1. Real-time updated results and current player stats
 1. Saving player results. When the same player joins the server their stats are loaded.
 1. Presenting a simple loading/error states
 1. Sorting the table by columns, pagination, and changing the number of rows displayed (locally).
-1. Updating the current URL table sort, so we get the same results when the page gets refreshed.
-1. Adding private player profiles with their stats
+1. Updating the current URL table sort, so we get the same sorting results when the page gets refreshed.
 1. And adding anything else that you think will be useful for the user...
 
 _Note: There are no formal "UX" designs for this exercise, so it's okay if it doesn't look polished._
 
 ## Realtime APIs
 
-There are no strict requirements on the backend. Pick a tool that you feel will work best in this scenario. Keep in mind that it should work well with Next.js
+There are no strict requirements on the backend. Pick a tool that you feel will work best in this scenario. Keep in mind that it should work well with Next.js. It could be anything from self hosted server to a fully managed low-code platform.
 
 ## Sentences
 
