@@ -23,13 +23,13 @@ You can do this however you see fit - you can email us a tarball, a pointer to d
 
 Develop an application that is a real-time writing competition ✍ platform️. Each person who visits a page can join a typing competition. On the main page, the application should render a current sentence to write, a time left to the next round, an input and a table with the current competitor results. Its structure can look like this:
 
-| Sentence           | Player name | Words per minute | Accuracy |
+| Live progress      | Player name | Words per minute | Accuracy |
 | :----------------- | :---------- | ---------------: | -------: |
 | Lazy fox jumped \| | super typer |               30 |     0.97 |
 
 Please add the following features (as many as you can):
 
-1. Real-time updated results and current player stats
+1. Real-time updated results and player stats
 1. Saving player results. When the same player joins the server their stats are loaded.
 1. Presenting a simple loading/error states
 1. Sorting the table by columns, pagination, and changing the number of rows displayed (locally).
