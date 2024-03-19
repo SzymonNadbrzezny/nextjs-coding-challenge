@@ -21,7 +21,7 @@ You can do this however you see fit - you can email us a tarball, a pointer to d
 
 ## Challenge
 
-Develop an application that is a real-time writing competition ✍ platform️. Each person who visits a page can join a typing competition. On the main page, the application should render a current sentence to write, a time left to the next round, an input and a table with the current competitor results. Its structure can look like this:
+Develop an application that is a real-time writing competition ✍ platform️. Each person who visits a page can join a typing competition and spar with other contestants. On the main page, the application should render a current sentence to write, a time left to the next round, an input and a table with the real updated current competitor results. Its structure can look like this:
 
 | Live progress      | Player name | Words per minute | Accuracy |
 | :----------------- | :---------- | ---------------: | -------: |
@@ -29,7 +29,11 @@ Develop an application that is a real-time writing competition ✍ platform️. 
 
 Please add the following features (as many as you can):
 
-1. Real-time updated results and player stats
+1. Real-time updated results and player stats. When a player joins a competition he/she should be shown in the main player's table with other currently playing contestants. The table should show live data, for example "Live progress" column should show the currently typed-in text of the given player.
+1. The game should consist of fixed-time rounds. In each round all currently playing people are presented with one sentence to type in. After the round time passes players are presented with the new sentence.
+1. Show metrics and stats for the currently active players.
+   - Words per minute - how fast the player correctly types in words. Words with errors shouldn't count.
+   - Accuracy - how often the player hits the correct key. It should be the value of correctly typed-in characters to all characters in the given sentence. Feel free to extend the calculation if needed to handle edge cases.
 1. Saving player results. When the same player joins the server their stats are loaded.
 1. Presenting a simple loading/error states
 1. Sorting the table by columns, pagination, and changing the number of rows displayed (locally).
