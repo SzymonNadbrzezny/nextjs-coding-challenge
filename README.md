@@ -4,30 +4,34 @@ Hi 👋! Thank you for taking the time to participate in this coding challenge t
 
 ## What to expect?
 
-We expect that it will take ~3 hours to complete this exercise. While you're welcome to take as much extra time as you'd like to clean up or improve the codebase, it's not required. If there's something that you would have done in a "real" production environment, feel free to add details to your `README`, so we can better understand what next steps you'd take.
+We expect that it will take ~3 hours to get meaningful results in this challenge. While you're welcome to take as much extra time as you'd like to clean up or improve the codebase, it's not required. If there's something that you would have done in a "real" production environment, feel free to add details to your `README`, so we can better understand what next steps you'd take.
 
 ## What we are looking for?
 
-- **Treat it like production code**. Develop your software in the same way that you would for any code that is intended to be deployed to production. This includes some of the following:
+- A working full stack web application that shows your developer skills.
+- Develop your software with the same mindset as you would for any code that is intended to be deployed to production. This includes executing and planning how to approach some of the following:
   - Adding caching, monitoring, state management, type safety, support for tests, thinking of security etc. Even though these may not be required for this simple exercise, we'd like to see this as this codebase would be extended over the coming months with multiple different developers
   - Writing code in TypeScript if that's your normal approach
   - Creating detailed commit messages, which represent discrete sets of work
   - Providing sample e2e, integration, and/or unit tests
+- Using web standards and best practices.
 - **Document your choices**. Whenever you're complete with this project, please document the choices that you've made in your project `README`.
+- Time for this challenge is very limited so pick your battles and keep startup mindset. We are not expecting a perfect solution, but we are looking for a solution that is well thought out but not fully completed.
+  - You can use any ready lib, starterkit or tool that will help you get the job done. If you are going to use AI for generating large amounts of code please document what parts were generated and what were written by you.
 
 ## How to submit?
 
-You can do this however you see fit - you can email us a tarball, a pointer to download your code from somewhere or just a link to a source control repository. Make sure your submission includes a small `README`, documenting any assumptions, simplifications and/or choices you made, as well as a short description of how to run the code and/or tests. Finally, to help us review your code, please split your commit history into sensible chunks.
+You can do this however you see fit - you can email us a tarball, a pointer to download your code or just a link to a source control repository. Make sure your submission includes a small `README`, documenting any assumptions, simplifications and/or choices you made, as well as a short description of how to run the code and/or tests. Finally, to help us review your code, please split your commit history into sensible chunks. Bonus points if you can include live demo link.
 
 ## Challenge
 
-Develop an application that is a real-time writing competition ✍ platform️. Each person who visits a page can join a typing competition and spar with other contestants. On the main page, the application should render a current sentence to write, a time left to the next round, an input and a table with the real updated current competitor results. Its structure can look like this:
+Develop an application that is a real-time writing competition ✍ platform️ (think of typeracer). Each person who visits a page can join a typing competition and spar with other contestants. On the main page, the application should render a current sentence to write, a time left to the next round, an input and a table with the real updated current competitor results. Its structure can look like this:
 
 | Live progress      | Player name | Words per minute | Accuracy |
 | :----------------- | :---------- | ---------------: | -------: |
 | Lazy fox jumped \| | super typer |               30 |     0.97 |
 
-Please add the following features (as many as you can):
+Please add some of the following features, the more the better. We don't expect all of them to be implemented in the given time frame but final solution should be fun to play.
 
 1. Real-time updated results and player stats. When a player joins a competition he/she should be shown in the main player's table with other currently playing contestants. The table should show live data, for example "Live progress" column should show the currently typed-in text of the given player.
 1. The game should consist of fixed-time rounds. In each round all currently playing people are presented with one sentence to type in. After the round time passes players are presented with the new sentence.
@@ -40,7 +44,7 @@ Please add the following features (as many as you can):
 1. Updating the current URL table sort, so we get the same sorting results when the page gets refreshed.
 1. And adding anything else that you think will be useful for the user...
 
-_Note: There are no formal "UX" designs for this exercise, so it's okay if it doesn't look polished._
+_Note: There are no formal "UX" designs for this exercise, so it's okay if it doesn't look polished. Hint: there are many ready libraries so you don't have to write UI from scratch._
 
 ## Realtime APIs
 
@@ -50,7 +54,7 @@ There are no strict requirements on the backend. Pick a tool that you feel will 
 
 There are no strict requirements for sentence source except that sentences should be in English. You can choose to copy some open-licensed texts from the Internet, generate them with LLM once or on the fly, or even write them yourself. You choose your strategy.
 
-## F.A.Q.
+## F.A.Q
 
 1. _Is it OK to share your solutions publicly?_
    Yes, the questions are not prescriptive, the process and discussion around the code is the valuable part. You do the work, you own the code. Given we are asking you to give up your time, it is entirely reasonable for you to keep and use your solution as you see fit.
