@@ -16,7 +16,7 @@ We expect that it will take ~3 hours to get meaningful results in this challenge
   - Providing sample e2e, integration, and/or unit tests
 - Using web standards and best practices.
 - **Document your choices**. Whenever you're complete with this project, please document the choices that you've made in your project `README`.
-- Time for this challenge is very limited so pick your battles and keep startup mindset. We are not expecting a perfect solution, but we are looking for a solution that is well thought out but not fully completed.
+- Time for this challenge is very limited so pick your battles and keep a startup mindset. We are not expecting a completed solution, but we are looking for a solution that is well thought out and future-proof.
   - You can use any ready lib, starterkit or tool that will help you get the job done. If you are going to use AI for generating large amounts of code please document what parts were generated and what were written by you.
 
 ## How to submit?
