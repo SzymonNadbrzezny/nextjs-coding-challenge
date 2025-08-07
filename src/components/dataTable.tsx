@@ -21,15 +21,12 @@ import { Button } from "./ui/button";
 import { useEffect, useState } from "react";
 import { ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { LeaderboardEntry } from "@/lib/socket";
 
-type Data = {
-  userName: string;
-  accuracy: number;
-  wpm: number;
-  words: string;
-};
-
-function SortingButton(text: string, column: Column<Data, unknown>): any {
+function SortingButton(
+  text: string,
+  column: Column<LeaderboardEntry, unknown>
+): any {
   return (
     <Button
       variant="ghost"
@@ -46,9 +43,9 @@ function SortingButton(text: string, column: Column<Data, unknown>): any {
   );
 }
 
-export const columns: ColumnDef<Data>[] = [
+export const columns: ColumnDef<LeaderboardEntry>[] = [
   {
-    accessorKey: "userName",
+    accessorKey: "username",
     header: ({ column }) => {
       return SortingButton("User Name", column);
     },
@@ -57,21 +54,20 @@ export const columns: ColumnDef<Data>[] = [
     header: ({ column }) => {
       return SortingButton("Accuracy (%)", column);
     },
-    accessorKey: "accuracy",
+    accessorKey: "averageAccuracy",
     cell: ({ row }) => {
-      const accuracy = row.getValue("accuracy");
-      if (typeof accuracy === "number") {
-        return <div className="text-right">{accuracy * 100}</div>;
-      }
+      return (
+        <div className="text-right">{row.getValue("averageAccuracy")}</div>
+      );
     },
   },
   {
     header: ({ column }) => {
       return SortingButton("Words per minute", column);
     },
-    accessorKey: "wpm",
+    accessorKey: "averageWpm",
     cell: ({ row }) => {
-      return <div className="text-right">{row.getValue("wpm")}</div>;
+      return <div className="text-right">{row.getValue("averageWpm")}</div>;
     },
   },
   {

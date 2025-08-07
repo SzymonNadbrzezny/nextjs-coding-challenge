@@ -102,6 +102,7 @@ app.prepare().then(() => {
 
       // Broadcast updated leaderboard to all clients
       const leaderboard = getLeaderboard();
+      console.log(leaderboard)
       io.emit('leaderboard-update', leaderboard);
 
       // Send updated stats to the user

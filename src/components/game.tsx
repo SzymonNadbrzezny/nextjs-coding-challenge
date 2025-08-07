@@ -9,14 +9,13 @@ import {
   CardTitle,
 } from "./ui/card";
 import { Input } from "./ui/input";
-import { cn } from "@/lib/utils";
 import {
   socketManager,
   type SpeedTestData,
   type LeaderboardEntry,
 } from "@/lib/socket";
 import { Button } from "./ui/button";
-import { useUserStore } from '@/providers/userStoreProvider'
+import { useUserStore } from '@/providers/userStoreProvider';
 const roundLength = 30;
 const getGradientColor = (timer: number) => {
   // Calculate percentage (timeLength = 100%, 0 seconds = 0%)
@@ -236,6 +235,38 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
           </div>
         </CardFooter>
       </Card>
+
+      {/* Leaderboard */}
+      {leaderboard.length > 0 && (
+        <Card className="w-full mt-4">
+          <CardHeader>
+            <CardTitle>Leaderboard</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {leaderboard.map((entry, index) => (
+                <div
+                  key={entry.userId}
+                  className="flex justify-between items-center p-2 bg-gray-50 rounded"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="font-bold">{index + 1}</span>
+                    <span>{entry.username}</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold">
+                      {entry.averageWpm.toFixed(1)} WPM
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {entry.averageAccuracy.toFixed(1)}% accuracy
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </>
   );
 }
