@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -16,7 +16,7 @@ import {
   type LeaderboardEntry,
 } from "@/lib/socket";
 import { Button } from "./ui/button";
-
+import { useUserStore } from '@/providers/userStoreProvider'
 const roundLength = 30;
 const getGradientColor = (timer: number) => {
   // Calculate percentage (timeLength = 100%, 0 seconds = 0%)
@@ -45,10 +45,42 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
   const [accuracy, setAccuracy] = useState(0);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [userId] = useState(() => crypto.randomUUID());
-  const [username, setUsername] = useState('');
+  const username = useUserStore((state) => state.userName);
+  const setUsername = useUserStore((state) => state.setUserName);
   const [isConnected, setIsConnected] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const endTest = useCallback(() => {
+    if (!startTime || !isConnected) return;
+
+    setIsTestActive(false);
+    const endTime = Date.now();
+    const timeElapsed = (endTime - startTime) / 1000;
+    const totalWords = currentSentence.trim().split(/\s+/).length;
+    const errors = calculateErrors(currentSentence, typedText);
+    const calculatedWpm = Math.round((totalWords / timeElapsed) * 60);
+    const calculatedAccuracy = Math.round(
+      ((totalWords - errors) / totalWords) * 100
+    );
+
+    setWpm(calculatedWpm);
+    setAccuracy(calculatedAccuracy);
+
+    // Send results via WebSocket
+    const testData: SpeedTestData = {
+      userId,
+      username,
+      wpm: calculatedWpm,
+      accuracy: calculatedAccuracy,
+      totalWords,
+      totalErrors: errors,
+      timeElapsed,
+      sentenceId: 1,
+    };
+
+    socketManager.sendSpeedTestResult(testData);
+  }, [startTime, isConnected, currentSentence, typedText, userId, username]);
 
   // Connect to WebSocket on component mount
   useEffect(() => {
@@ -87,7 +119,7 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [isTestActive]);
+  }, [isTestActive, endTest]);
 
   const startTest = () => {
     if (!username) {
@@ -101,37 +133,6 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
     setWpm(0);
     setAccuracy(0);
     setTimeout(() => inputRef.current?.focus(), 100);
-  };
-
-  const endTest = () => {
-    if (!startTime || !isConnected) return;
-
-    setIsTestActive(false);
-    const endTime = Date.now();
-    const timeElapsed = (endTime - startTime) / 1000;
-    const totalWords = currentSentence.trim().split(/\s+/).length;
-    const errors = calculateErrors(currentSentence, typedText);
-    const calculatedWpm = Math.round((totalWords / timeElapsed) * 60);
-    const calculatedAccuracy = Math.round(
-      ((totalWords - errors) / totalWords) * 100
-    );
-
-    setWpm(calculatedWpm);
-    setAccuracy(calculatedAccuracy);
-
-    // Send results via WebSocket
-    const testData: SpeedTestData = {
-      userId,
-      username,
-      wpm: calculatedWpm,
-      accuracy: calculatedAccuracy,
-      totalWords,
-      totalErrors: errors,
-      timeElapsed,
-      sentenceId: 1,
-    };
-
-    socketManager.sendSpeedTestResult(testData);
   };
 
   const calculateErrors = (original: string, typed: string): number => {
@@ -171,20 +172,22 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
           <CardTitle>Enter Your Username</CardTitle>
         </CardHeader>
         <CardContent className="flex flex-row gap-2">
-          <Input
-            placeholder="Username"
-            onKeyDown={(e) =>
-              e.key === "Enter" ? setUsername(e.currentTarget.value) : e.key
-            }
-            ref={usernameRef}
-          />
-          <Button
-            onClick={() => {
-              if (usernameRef.current && usernameRef.current.value) {
-                setUsername(usernameRef.current.value);
-              }
-            }}
-          >
+                     <Input
+             placeholder="Username"
+             onKeyDown={(e) => {
+               if (e.key === "Enter" && e.currentTarget.value) {
+                 setUsername(e.currentTarget.value);
+               }
+             }}
+             ref={usernameRef}
+           />
+           <Button
+             onClick={() => {
+               if (usernameRef.current && usernameRef.current.value) {
+                 setUsername(usernameRef.current.value);
+               }
+             }}
+           >
             Submit
           </Button>
         </CardContent>
@@ -233,38 +236,6 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
           </div>
         </CardFooter>
       </Card>
-
-      {/* Leaderboard */}
-      {leaderboard.length > 0 && (
-        <Card className="w-full mt-4">
-          <CardHeader>
-            <CardTitle>Leaderboard</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {leaderboard.map((entry, index) => (
-                <div
-                  key={entry.userId}
-                  className="flex justify-between items-center p-2 bg-gray-50 rounded"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="font-bold">{index + 1}</span>
-                    <span>{entry.username}</span>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold">
-                      {entry.averageWpm.toFixed(1)} WPM
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {entry.averageAccuracy.toFixed(1)}% accuracy
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </>
   );
 }
