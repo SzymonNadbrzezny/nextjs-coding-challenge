@@ -17,6 +17,7 @@ import {
 import { Button } from "./ui/button";
 import { useUserStore } from "@/providers/userStoreProvider";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 const roundLength = 30;
 const getGradientColor = (timer: number) => {
   // Calculate percentage (timeLength = 100%, 0 seconds = 0%)
@@ -34,6 +35,7 @@ const getGradientColor = (timer: number) => {
 export default function SpeedTester({ sentences }: { sentences: any }) {
   const [timer, setTimer] = useState(roundLength);
   const [isTestActive, setIsTestActive] = useState(false);
+  const [isTestOngoing, setIsTestOngoing] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [typedText, setTypedText] = useState("");
   const [currentSentence, setCurrentSentence] = useState("");
@@ -43,7 +45,6 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
   }, []);
   const [wpm, setWpm] = useState(0);
   const [accuracy, setAccuracy] = useState(0);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [userId] = useState(() => crypto.randomUUID());
   const username = useUserStore((state) => state.userName);
   const setUsername = useUserStore((state) => state.setUserName);
@@ -53,7 +54,6 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
 
   const endTest = useCallback(() => {
     if (!startTime || !isConnected) return;
-
     setIsTestActive(false);
     const endTime = Date.now();
     const timeElapsed = (endTime - startTime) / 1000;
@@ -64,8 +64,10 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
       ((totalWords - errors) / totalWords) * 100
     );
 
-    setWpm(calculatedWpm);
-    setAccuracy(calculatedAccuracy);
+    setWpm((prev) => (prev != 0 ? (prev + calculatedWpm) / 2 : calculatedWpm));
+    setAccuracy((prev) =>
+      prev != 0 ? (prev + calculatedAccuracy) / 2 : calculatedAccuracy
+    );
 
     // Send results via WebSocket
     const testData: SpeedTestData = {
@@ -80,6 +82,17 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
     };
 
     socketManager.sendSpeedTestResult(testData);
+    toast.info("New sentence in 10 second!");
+    setTimer(10);
+
+    setTimeout(() => {
+      const randomIndex = Math.floor(Math.random() * sentences.length);
+      setCurrentSentence(sentences[randomIndex]);
+      setIsTestActive(true);
+      setTimer(roundLength);
+      setTypedText("");
+      inputRef.current?.focus();
+    }, 10000);
   }, [startTime, isConnected, currentSentence, typedText, userId, username]);
 
   // Connect to WebSocket on component mount
@@ -87,11 +100,6 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
     if (username) {
       socketManager.connect(userId, username);
       setIsConnected(true);
-
-      // Set up event listeners
-      socketManager.onLeaderboardUpdate((data) => {
-        setLeaderboard(data);
-      });
 
       socketManager.onUserStatsUpdate((stats) => {
         console.log("User stats updated:", stats);
@@ -107,7 +115,7 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
   }, [userId, username]);
 
   useEffect(() => {
-    if (isTestActive) {
+    if (isTestOngoing) {
       const interval = setInterval(() => {
         setTimer((prevTimer) => {
           if (prevTimer === 0) {
@@ -119,14 +127,17 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [isTestActive, endTest]);
+  }, [isTestActive, isTestOngoing, endTest]);
 
   const startTest = () => {
     if (!username) {
       alert("Please enter a username first!");
       return;
     }
+    const randomIndex = Math.floor(Math.random() * sentences.length);
+    setCurrentSentence(sentences[randomIndex]);
     setIsTestActive(true);
+    setIsTestOngoing(true);
     setStartTime(Date.now());
     setTimer(roundLength);
     setTypedText("");
@@ -135,11 +146,19 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
+  const stopTest = () => {
+    setIsTestActive(false);
+    setIsTestOngoing(false);
+    setTimer(roundLength);
+    setTypedText("");
+    setWpm(0);
+    setAccuracy(0);
+  };
+
   const calculateErrors = (original: string, typed: string): number => {
     const originalWords = original.trim().split(/\s+/);
     const typedWords = typed.trim().split(/\s+/);
     let errors = 0;
-    let mask = "";
     for (
       let i = 0;
       i < Math.max(originalWords.length, typedWords.length);
@@ -157,7 +176,6 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
 
     const value = e.target.value;
     setTypedText(value);
-    calculateErrors(currentSentence, value);
     // Auto-end test if sentence is completed
     if (value.trim() === currentSentence.trim()) {
       endTest();
@@ -204,27 +222,43 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
           </CardDescription>
           <CardTitle>Your text:</CardTitle>
         </CardHeader>
-        <CardContent>
-          <p className={cn("text-lg w-fit mb-4", !isTestActive && "bg-black")}>
+        <CardContent className="flex flex-col gap-4">
+          <p
+            className={cn(
+              "text-lg w-fit ",
+              !isTestActive && "bg-black select-none"
+            )}
+          >
             {currentSentence}
           </p>
-          {!isTestActive ? (
-            <button
-              onClick={startTest}
-              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
-            >
-              Start Test
-            </button>
-          ) : (
-            <Input
-              ref={inputRef}
-              name="textInput"
-              value={typedText}
-              onChange={handleTyping}
-              placeholder="Start typing..."
-              className="text-lg"
-            />
-          )}
+          <div className="flex flex-row gap-4">
+            {!isTestActive ? (
+              <Button
+                onClick={startTest}
+                className="px-4 h-10 py-2 w-fit bg-blue-500 text-white rounded hover:bg-blue-600"
+              >
+                Start Test
+              </Button>
+            ) : (
+              <Input
+                ref={inputRef}
+                name="textInput"
+                value={typedText}
+                onChange={handleTyping}
+                placeholder="Start typing..."
+                className="text-lg h-10"
+              />
+            )}
+          </div>
+
+          <Button
+            disabled={!(isTestActive && isTestOngoing)}
+            onClick={stopTest}
+            className="px-4 h-10 py-2 w-fit rounded"
+            variant={"destructive"}
+          >
+            Stop Test
+          </Button>
         </CardContent>
         <CardFooter className="flex justify-between">
           <div className="text-sm text-gray-600">
