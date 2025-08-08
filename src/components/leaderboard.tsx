@@ -12,7 +12,6 @@ export default function Leaderboard() {
 
   useEffect(() => {
     socketManager.connect(userId, username);
-    socketManager.requestLeaderboard;
     socketManager.onLeaderboardUpdate((data) => {
       setData(() => data);
     });

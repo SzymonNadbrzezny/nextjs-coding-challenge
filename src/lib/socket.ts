@@ -15,12 +15,8 @@ export interface SpeedTestData {
 export interface LeaderboardEntry {
   userId: string;
   username: string;
-  averageWpm: number;
-  averageAccuracy: number;
-  totalTests: number;
-  bestWpm: number;
-  bestAccuracy: number;
-  lastTestDate: string;
+  wpm: number;
+  accuracy: number;
 }
 
 class SocketManager {
@@ -50,6 +46,7 @@ class SocketManager {
     this.socket.on("connect", () => {
       console.log(`Connected to WebSocket server as ${username}`);
       this.isConnected = true;
+      this.requestLeaderboard()
     });
 
     this.socket.on("disconnect", () => {
@@ -94,7 +91,9 @@ class SocketManager {
   }
 
   requestLeaderboard() {
+    console.log('test',this.socket,this.isConnected)
     if (this.socket && this.isConnected) {
+      
       this.socket.emit("request-leaderboard");
     }
   }

@@ -54,11 +54,11 @@ export const columns: ColumnDef<LeaderboardEntry>[] = [
     header: ({ column }) => {
       return SortingButton("Accuracy (%)", column);
     },
-    accessorKey: "averageAccuracy",
+    accessorKey: "accuracy",
     cell: ({ row }) => {
       return (
         <div className="text-right">
-          {parseFloat(row.getValue("averageAccuracy")).toFixed(2)}
+          {parseFloat(row.getValue("accuracy")).toFixed(2)}
         </div>
       );
     },
@@ -67,11 +67,11 @@ export const columns: ColumnDef<LeaderboardEntry>[] = [
     header: ({ column }) => {
       return SortingButton("Words per minute", column);
     },
-    accessorKey: "averageWpm",
+    accessorKey: "wpm",
     cell: ({ row }) => {
       return (
         <div className="text-right">
-          {parseFloat(row.getValue("averageWpm")).toFixed(2)}
+          {parseFloat(row.getValue("wpm")).toFixed(2)}
         </div>
       );
     },
