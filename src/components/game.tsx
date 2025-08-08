@@ -45,6 +45,7 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
   }, []);
   const [wpm, setWpm] = useState(0);
   const [accuracy, setAccuracy] = useState(0);
+  const [streak, setStreak] = useState(0);
   const [userId] = useState(() => crypto.randomUUID());
   const username = useUserStore((state) => state.userName);
   const setUsername = useUserStore((state) => state.setUserName);
@@ -63,7 +64,12 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
     const calculatedAccuracy = Math.round(
       ((totalWords - errors) / totalWords) * 100
     );
-
+    if (errors == 0) {
+      setStreak((prev) => prev + 1);
+    } else {
+      setStreak((prev) => 0);
+    }
+    console.log(streak, errors);
     setWpm((prev) => (prev != 0 ? (prev + calculatedWpm) / 2 : calculatedWpm));
     setAccuracy((prev) =>
       prev != 0 ? (prev + calculatedAccuracy) / 2 : calculatedAccuracy
@@ -79,18 +85,18 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
       totalErrors: errors,
       timeElapsed,
       sentenceId: 1,
+      streak: streak,
     };
 
     socketManager.sendSpeedTestResult(testData);
     toast.info("New sentence in 10 second!");
     setTimer(10);
-
+    setTypedText("");
+    const randomIndex = Math.floor(Math.random() * sentences.length);
+    setCurrentSentence(sentences[randomIndex]);
     setTimeout(() => {
-      const randomIndex = Math.floor(Math.random() * sentences.length);
-      setCurrentSentence(sentences[randomIndex]);
       setIsTestActive(true);
       setTimer(roundLength);
-      setTypedText("");
       inputRef.current?.focus();
     }, 10000);
   }, [startTime, isConnected, currentSentence, typedText, userId, username]);
@@ -153,11 +159,12 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
     setTypedText("");
     setWpm(0);
     setAccuracy(0);
+    setStreak(0);
   };
 
   const calculateErrors = (original: string, typed: string): number => {
     const originalWords = original.trim().split(/\s+/);
-    const typedWords = typed.trim().split(/\s+/);
+    const typedWords = `${typed}.`.trim().split(/\s+/);
     let errors = 0;
     for (
       let i = 0;
@@ -165,9 +172,11 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
       i++
     ) {
       if (originalWords[i] !== typedWords[i]) {
+        console.log(originalWords[i], typedWords[i]);
         errors++;
       }
     }
+    console.log(typedWords, originalWords);
     return errors;
   };
 
@@ -232,7 +241,7 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
             {currentSentence}
           </p>
           <div className="flex flex-row gap-4">
-            {!isTestActive ? (
+            {!isTestOngoing ? (
               <Button
                 onClick={startTest}
                 className="px-4 h-10 py-2 w-fit bg-blue-500 text-white rounded hover:bg-blue-600"
@@ -252,7 +261,7 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
           </div>
 
           <Button
-            disabled={!(isTestActive && isTestOngoing)}
+            disabled={!(isTestActive || isTestOngoing)}
             onClick={stopTest}
             className="px-4 h-10 py-2 w-fit rounded"
             variant={"destructive"}

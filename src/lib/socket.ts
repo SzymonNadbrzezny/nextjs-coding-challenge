@@ -1,4 +1,4 @@
-import { io, Socket } from 'socket.io-client';
+import { io, Socket } from "socket.io-client";
 
 export interface SpeedTestData {
   userId: string;
@@ -9,6 +9,7 @@ export interface SpeedTestData {
   totalErrors: number;
   timeElapsed: number;
   sentenceId: number;
+  streak: number;
 }
 
 export interface LeaderboardEntry {
@@ -31,25 +32,25 @@ class SocketManager {
       this.socket.disconnect();
     }
 
-    this.socket = io('http://localhost:3000', {
+    this.socket = io("http://localhost:3000", {
       query: {
         userId,
-        username
-      }
+        username,
+      },
     });
 
-    this.socket.on('connect', () => {
-      console.log('Connected to WebSocket server');
+    this.socket.on("connect", () => {
+      console.log("Connected to WebSocket server");
       this.isConnected = true;
     });
 
-    this.socket.on('disconnect', () => {
-      console.log('Disconnected from WebSocket server');
+    this.socket.on("disconnect", () => {
+      console.log("Disconnected from WebSocket server");
       this.isConnected = false;
     });
 
-    this.socket.on('error', (error) => {
-      console.error('WebSocket error:', error);
+    this.socket.on("error", (error) => {
+      console.error("WebSocket error:", error);
     });
 
     return this.socket;
@@ -65,31 +66,31 @@ class SocketManager {
 
   sendSpeedTestResult(data: SpeedTestData) {
     if (this.socket && this.isConnected) {
-      this.socket.emit('speed-test-result', data);
+      this.socket.emit("speed-test-result", data);
     }
   }
 
   onLeaderboardUpdate(callback: (leaderboard: LeaderboardEntry[]) => void) {
     if (this.socket) {
-      this.socket.on('leaderboard-update', callback);
+      this.socket.on("leaderboard-update", callback);
     }
   }
 
   onUserStatsUpdate(callback: (stats: any) => void) {
     if (this.socket) {
-      this.socket.on('user-stats-update', callback);
+      this.socket.on("user-stats-update", callback);
     }
   }
 
   requestLeaderboard() {
     if (this.socket && this.isConnected) {
-      this.socket.emit('request-leaderboard');
+      this.socket.emit("request-leaderboard");
     }
   }
 
   requestUserStats(userId: string) {
     if (this.socket && this.isConnected) {
-      this.socket.emit('request-user-stats', { userId });
+      this.socket.emit("request-user-stats", { userId });
     }
   }
 

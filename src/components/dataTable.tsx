@@ -57,7 +57,9 @@ export const columns: ColumnDef<LeaderboardEntry>[] = [
     accessorKey: "averageAccuracy",
     cell: ({ row }) => {
       return (
-        <div className="text-right">{row.getValue("averageAccuracy")}</div>
+        <div className="text-right">
+          {parseFloat(row.getValue("averageAccuracy")).toFixed(2)}
+        </div>
       );
     },
   },
@@ -67,12 +69,23 @@ export const columns: ColumnDef<LeaderboardEntry>[] = [
     },
     accessorKey: "averageWpm",
     cell: ({ row }) => {
-      return <div className="text-right">{row.getValue("averageWpm")}</div>;
+      return (
+        <div className="text-right">
+          {parseFloat(row.getValue("averageWpm")).toFixed(2)}
+        </div>
+      );
     },
   },
   {
-    header: "Live Progress",
-    accessorKey: "progress",
+    header: "Streak",
+    accessorKey: "streak",
+    cell: ({ row }) => {
+      return (
+        <div className="text-right">
+          {row.getValue("streak")}
+        </div>
+      );
+    },
   },
 ];
 

@@ -1,7 +1,7 @@
-import { createServer } from 'http';
-import { parse } from 'url';
-import next from 'next';
-import { Server, Socket } from 'socket.io';
+import { createServer } from "http";
+import { parse } from "url";
+import next from "next";
+import { Server, Socket } from "socket.io";
 
 // In-memory storage for speed test data
 interface User {
@@ -21,6 +21,7 @@ interface SpeedTestRecord {
   timeElapsed: number;
   sentenceId: number;
   createdAt: string;
+  streak: number;
 }
 
 interface UserStats {
@@ -32,15 +33,16 @@ interface UserStats {
   bestWpm: number;
   bestAccuracy: number;
   lastTestDate: string;
+  streak: number;
 }
 
 // In-memory database
 const users = new Map<string, User>();
 const speedTestRecords = new Map<string, SpeedTestRecord>();
 
-const dev = process.env.NODE_ENV !== 'production';
-const hostname = 'localhost';
-const port = parseInt(process.env.PORT || '3000', 10);
+const dev = process.env.NODE_ENV !== "production";
+const hostname = "localhost";
+const port = parseInt(process.env.PORT || "3000", 10);
 
 // Prepare the Next.js app
 const app = next({ dev, hostname, port });
@@ -52,9 +54,9 @@ app.prepare().then(() => {
       const parsedUrl = parse(req.url!, true);
       await handle(req, res, parsedUrl);
     } catch (err) {
-      console.error('Error occurred handling', req.url, err);
+      console.error("Error occurred handling", req.url, err);
       res.statusCode = 500;
-      res.end('internal server error');
+      res.end("internal server error");
     }
   });
 
@@ -62,15 +64,15 @@ app.prepare().then(() => {
   const io = new Server(server, {
     cors: {
       origin: "*",
-      methods: ["GET", "POST"]
-    }
+      methods: ["GET", "POST"],
+    },
   });
 
   // Socket.IO connection handling
-  io.on('connection', (socket: Socket) => {
+  io.on("connection", (socket: Socket) => {
     const userId = socket.handshake.query.userId as string;
     const username = socket.handshake.query.username as string;
-    
+
     console.log(`User connected: ${username} (${userId})`);
 
     // Store user if not exists
@@ -78,12 +80,12 @@ app.prepare().then(() => {
       users.set(userId, {
         id: userId,
         username,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       });
     }
 
     // Handle speed test results
-    socket.on('speed-test-result', (data: any) => {
+    socket.on("speed-test-result", (data: any) => {
       const record: SpeedTestRecord = {
         id: crypto.randomUUID(),
         userId: data.userId,
@@ -94,40 +96,43 @@ app.prepare().then(() => {
         totalErrors: data.totalErrors,
         timeElapsed: data.timeElapsed,
         sentenceId: data.sentenceId,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        streak: data.streak,
       };
 
       speedTestRecords.set(record.id, record);
-      console.log(`Speed test result saved: ${data.username} - ${data.wpm} WPM, ${data.accuracy}% accuracy`);
+      console.log(
+        `Speed test result saved: ${data.username} - ${data.wpm} WPM, ${data.accuracy}% accuracy`
+      );
 
       // Broadcast updated leaderboard to all clients
       const leaderboard = getLeaderboard();
-      console.log(leaderboard)
-      io.emit('leaderboard-update', leaderboard);
+      console.log(leaderboard);
+      io.emit("leaderboard-update", leaderboard);
 
       // Send updated stats to the user
       const userStats = getUserStats(data.userId);
       if (userStats) {
-        socket.emit('user-stats-update', userStats);
+        socket.emit("user-stats-update", userStats);
       }
     });
 
     // Handle leaderboard requests
-    socket.on('request-leaderboard', () => {
+    socket.on("request-leaderboard", () => {
       const leaderboard = getLeaderboard();
-      socket.emit('leaderboard-update', leaderboard);
+      socket.emit("leaderboard-update", leaderboard);
     });
 
     // Handle user stats requests
-    socket.on('request-user-stats', (data: { userId: string }) => {
+    socket.on("request-user-stats", (data: { userId: string }) => {
       const userStats = getUserStats(data.userId);
       if (userStats) {
-        socket.emit('user-stats-update', userStats);
+        socket.emit("user-stats-update", userStats);
       }
     });
 
     // Handle disconnection
-    socket.on('disconnect', () => {
+    socket.on("disconnect", () => {
       console.log(`User disconnected: ${username} (${userId})`);
     });
   });
@@ -139,14 +144,23 @@ app.prepare().then(() => {
     // Calculate stats for each user
     for (const record of speedTestRecords.values()) {
       const existing = userStatsMap.get(record.userId);
-      
+
       if (existing) {
         existing.totalTests++;
-        existing.averageWpm = (existing.averageWpm * (existing.totalTests - 1) + record.wpm) / existing.totalTests;
-        existing.averageAccuracy = (existing.averageAccuracy * (existing.totalTests - 1) + record.accuracy) / existing.totalTests;
+        existing.averageWpm =
+          (existing.averageWpm * (existing.totalTests - 1) + record.wpm) /
+          existing.totalTests;
+        existing.averageAccuracy =
+          (existing.averageAccuracy * (existing.totalTests - 1) +
+            record.accuracy) /
+          existing.totalTests;
         existing.bestWpm = Math.max(existing.bestWpm, record.wpm);
-        existing.bestAccuracy = Math.max(existing.bestAccuracy, record.accuracy);
+        existing.bestAccuracy = Math.max(
+          existing.bestAccuracy,
+          record.accuracy
+        );
         existing.lastTestDate = record.createdAt;
+        existing.streak = record.streak;
       } else {
         userStatsMap.set(record.userId, {
           userId: record.userId,
@@ -156,7 +170,8 @@ app.prepare().then(() => {
           totalTests: 1,
           bestWpm: record.wpm,
           bestAccuracy: record.accuracy,
-          lastTestDate: record.createdAt
+          lastTestDate: record.createdAt,
+          streak: record.streak,
         });
       }
     }
@@ -168,17 +183,27 @@ app.prepare().then(() => {
   }
 
   function getUserStats(userId: string): UserStats | null {
-    const userRecords = Array.from(speedTestRecords.values())
-      .filter(record => record.userId === userId);
+    const userRecords = Array.from(speedTestRecords.values()).filter(
+      (record) => record.userId === userId
+    );
 
     if (userRecords.length === 0) return null;
 
     const totalWpm = userRecords.reduce((sum, record) => sum + record.wpm, 0);
-    const totalAccuracy = userRecords.reduce((sum, record) => sum + record.accuracy, 0);
-    const bestWpm = Math.max(...userRecords.map(record => record.wpm));
-    const bestAccuracy = Math.max(...userRecords.map(record => record.accuracy));
-    const lastTestDate = userRecords
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0].createdAt;
+    const totalAccuracy = userRecords.reduce(
+      (sum, record) => sum + record.accuracy,
+      0
+    );
+    const bestWpm = Math.max(...userRecords.map((record) => record.wpm));
+    const bestStreak = Math.max(...userRecords.map((record) => record.streak));
+    const bestAccuracy = Math.max(
+      ...userRecords.map((record) => record.accuracy)
+    );
+    const lastTestDate = userRecords.sort(
+      (a, b) =>
+        
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    )[0].createdAt;
 
     return {
       userId,
@@ -188,7 +213,8 @@ app.prepare().then(() => {
       totalTests: userRecords.length,
       bestWpm,
       bestAccuracy,
-      lastTestDate
+      lastTestDate,
+      streak: bestStreak,
     };
   }
 
