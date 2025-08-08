@@ -26,21 +26,29 @@ export interface LeaderboardEntry {
 class SocketManager {
   private socket: Socket | null = null;
   private isConnected = false;
+  private currentUserId: string | null = null;
+  private currentUsername: string | null = null;
 
   connect(userId: string, username: string) {
-    if (this.socket) {
-      this.socket.disconnect();
+    // Avoid reconnecting if already connected with the same user
+    if (
+      this.socket &&
+      this.isConnected &&
+      this.currentUserId === userId &&
+      this.currentUsername === username
+    ) {
+      return this.socket;
     }
 
+    this.currentUserId = userId;
+    this.currentUsername = username;
+
     this.socket = io("http://localhost:3000", {
-      query: {
-        userId,
-        username,
-      },
+      query: { userId, username },
     });
 
     this.socket.on("connect", () => {
-      console.log("Connected to WebSocket server");
+      console.log(`Connected to WebSocket server as ${username}`);
       this.isConnected = true;
     });
 
@@ -51,6 +59,7 @@ class SocketManager {
 
     this.socket.on("error", (error) => {
       console.error("WebSocket error:", error);
+      this.isConnected = false;
     });
 
     return this.socket;
@@ -61,6 +70,8 @@ class SocketManager {
       this.socket.disconnect();
       this.socket = null;
       this.isConnected = false;
+      this.currentUserId = null;
+      this.currentUsername = null;
     }
   }
 

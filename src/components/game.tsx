@@ -1,5 +1,11 @@
 "use client";
+
 import { useState, useEffect, useRef, useCallback } from "react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { useUserStore } from "@/providers/userStoreProvider";
+import { useSocket } from "@/hooks/useSocket";
+import type { SpeedTestData } from "@/lib/socket";
 import {
   Card,
   CardContent,
@@ -9,71 +15,121 @@ import {
   CardTitle,
 } from "./ui/card";
 import { Input } from "./ui/input";
-import {
-  socketManager,
-  type SpeedTestData,
-  type LeaderboardEntry,
-} from "@/lib/socket";
 import { Button } from "./ui/button";
-import { useUserStore } from "@/providers/userStoreProvider";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
-const roundLength = 30;
-const getGradientColor = (timer: number) => {
-  // Calculate percentage (timeLength = 100%, 0 seconds = 0%)
-  const percentage = 100 - (timer / roundLength) * 100;
-  // Interpolate from black (#000000) to red (#FF0000)
-  const red = Math.round((percentage / 100) * 255);
-  const green = 0;
-  const blue = 0;
+// Constants
+const ROUND_LENGTH = 30;
+const BREAK_LENGTH = 10;
 
-  return `#${red.toString(16).padStart(2, "0")}${green
-    .toString(16)
-    .padStart(2, "0")}${blue.toString(16).padStart(2, "0")}`;
+// Types
+interface SpeedTesterProps {
+  sentences: string[];
+}
+
+interface TestStats {
+  wpm: number;
+  accuracy: number;
+  streak: number;
+}
+
+// Utility functions
+const getGradientColor = (timer: number): string => {
+  const percentage = 100 - (timer / ROUND_LENGTH) * 100;
+  const red = Math.round((percentage / 100) * 255);
+  
+  return `#${red.toString(16).padStart(2, "0")}0000`;
 };
 
-export default function SpeedTester({ sentences }: { sentences: any }) {
-  const [timer, setTimer] = useState(roundLength);
+const calculateErrors = (original: string, typed: string): number => {
+  const originalWords = original.trim().split(/\s+/);
+  const typedWords = (typed).trim().split(/\s+/);
+  
+  let errors = 0;
+  const maxLength = Math.max(originalWords.length, typedWords.length);
+  
+  for (let i = 0; i < maxLength; i++) {
+    if (originalWords[i] !== typedWords[i]) {
+      errors++;
+    }
+  }
+  
+  return errors;
+};
+
+const getRandomSentence = (sentences: string[]): string => {
+  const randomIndex = Math.floor(Math.random() * sentences.length);
+  return 'test';
+};
+
+export default function SpeedTester({ sentences }: SpeedTesterProps) {
+  // Timer and test state
+  const [timer, setTimer] = useState(ROUND_LENGTH);
   const [isTestActive, setIsTestActive] = useState(false);
   const [isTestOngoing, setIsTestOngoing] = useState(false);
   const [startTime, setStartTime] = useState<number | null>(null);
+  
+  // Text input state
   const [typedText, setTypedText] = useState("");
   const [currentSentence, setCurrentSentence] = useState("");
-  useEffect(() => {
-    const randomIndex = Math.floor(Math.random() * sentences.length);
-    setCurrentSentence(sentences[randomIndex]);
-  }, []);
-  const [wpm, setWpm] = useState(0);
-  const [accuracy, setAccuracy] = useState(0);
-  const [streak, setStreak] = useState(0);
+  
+  // Performance stats
+  const [stats, setStats] = useState<TestStats>({ wpm: 0, accuracy: 0, streak: 0 });
+  
+  // User data
   const [userId] = useState(() => crypto.randomUUID());
   const username = useUserStore((state) => state.userName);
   const setUsername = useUserStore((state) => state.setUserName);
-  const [isConnected, setIsConnected] = useState(false);
+  
+  // Socket connection
+  const { 
+    isConnected, 
+    sendSpeedTestResult, 
+    onUserStatsUpdate 
+  } = useSocket({ 
+    userId, 
+    username: username || '', 
+    autoConnect: !!username 
+  });
 
+  // Refs
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const endTest = useCallback(() => {
-    if (!startTime || !isConnected) return;
+  // Initialize with random sentence
+  useEffect(() => {
+    if (sentences.length > 0) {
+      setCurrentSentence(getRandomSentence(sentences));
+    }
+  }, [sentences]);
+
+  // Set up socket listeners
+  useEffect(() => {
+    onUserStatsUpdate((userStats) => {
+      console.log("User stats updated:", userStats);
+    });
+  }, [onUserStatsUpdate]);
+
+  const endRound = useCallback((text:string) => {
+    if (!startTime || !isConnected || !username) return;
+    
     setIsTestActive(false);
     const endTime = Date.now();
     const timeElapsed = (endTime - startTime) / 1000;
     const totalWords = currentSentence.trim().split(/\s+/).length;
-    const errors = calculateErrors(currentSentence, typedText);
+    const errors = calculateErrors(currentSentence, text);
+    
     const calculatedWpm = Math.round((totalWords / timeElapsed) * 60);
-    const calculatedAccuracy = Math.round(
-      ((totalWords - errors) / totalWords) * 100
-    );
-    if (errors == 0) {
-      setStreak((prev) => prev + 1);
-    } else {
-      setStreak((prev) => 0);
-    }
-    console.log(streak, errors);
-    setWpm((prev) => (prev != 0 ? (prev + calculatedWpm) / 2 : calculatedWpm));
-    setAccuracy((prev) =>
-      prev != 0 ? (prev + calculatedAccuracy) / 2 : calculatedAccuracy
-    );
+    const calculatedAccuracy = Math.round(((totalWords - errors) / totalWords) * 100);
+    
+    // Update streak
+    const newStreak = errors === 0 ? stats.streak + 1 : 0;
+    
+    // Update stats with running averages
+    const newStats: TestStats = {
+      wpm: stats.wpm === 0 ? calculatedWpm : Math.round((stats.wpm + calculatedWpm) / 2),
+      accuracy: stats.accuracy === 0 ? calculatedAccuracy : Math.round((stats.accuracy + calculatedAccuracy) / 2),
+      streak: newStreak
+    };
+    
+    setStats(newStats);
 
     // Send results via WebSocket
     const testData: SpeedTestData = {
@@ -85,113 +141,89 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
       totalErrors: errors,
       timeElapsed,
       sentenceId: 1,
-      streak: streak,
+      streak: newStreak,
     };
 
-    socketManager.sendSpeedTestResult(testData);
-    toast.info("New sentence in 10 second!");
-    setTimer(10);
+    sendSpeedTestResult(testData);
+    
+    // Prepare for next round
+    toast.info(`New sentence in ${BREAK_LENGTH} seconds!`);
+    setTimer(BREAK_LENGTH);
     setTypedText("");
-    const randomIndex = Math.floor(Math.random() * sentences.length);
-    setCurrentSentence(sentences[randomIndex]);
+    setCurrentSentence(getRandomSentence(sentences));
+    
     setTimeout(() => {
       setIsTestActive(true);
-      setTimer(roundLength);
+      setTimer(ROUND_LENGTH);
       inputRef.current?.focus();
-    }, 10000);
-  }, [startTime, isConnected, currentSentence, typedText, userId, username]);
+    }, BREAK_LENGTH * 1000);
+  }, [startTime, isConnected, currentSentence, typedText, userId, username, stats, sentences]);
 
-  // Connect to WebSocket on component mount
-  useEffect(() => {
-    if (username) {
-      socketManager.connect(userId, username);
-      setIsConnected(true);
 
-      socketManager.onUserStatsUpdate((stats) => {
-        console.log("User stats updated:", stats);
-      });
 
-      // Request initial leaderboard
-      socketManager.requestLeaderboard();
-    }
-
-    return () => {
-      socketManager.disconnect();
-    };
-  }, [userId, username]);
-
+  // Timer management
   useEffect(() => {
     if (isTestOngoing) {
       const interval = setInterval(() => {
         setTimer((prevTimer) => {
-          if (prevTimer === 0) {
-            endTest();
-            return roundLength;
+          if (prevTimer === 0 ) {
+            if(isTestActive) endRound(typedText);
+            return ROUND_LENGTH;
           }
           return prevTimer - 1;
         });
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [isTestActive, isTestOngoing, endTest]);
+  }, [isTestActive, isTestOngoing]);
 
-  const startTest = () => {
+  const startTest = useCallback(() => {
     if (!username) {
-      alert("Please enter a username first!");
+      toast.error("Please enter a username first!");
       return;
     }
-    const randomIndex = Math.floor(Math.random() * sentences.length);
-    setCurrentSentence(sentences[randomIndex]);
+    
+    setCurrentSentence(getRandomSentence(sentences));
     setIsTestActive(true);
     setIsTestOngoing(true);
     setStartTime(Date.now());
-    setTimer(roundLength);
+    setTimer(ROUND_LENGTH);
     setTypedText("");
-    setWpm(0);
-    setAccuracy(0);
+    
     setTimeout(() => inputRef.current?.focus(), 100);
-  };
+  }, [username, sentences]);
 
-  const stopTest = () => {
+  const stopTest = useCallback(() => {
     setIsTestActive(false);
     setIsTestOngoing(false);
-    setTimer(roundLength);
+    setTimer(ROUND_LENGTH);
     setTypedText("");
-    setWpm(0);
-    setAccuracy(0);
-    setStreak(0);
-  };
+    setStats({ wpm: 0, accuracy: 0, streak: 0 });
+  }, []);
 
-  const calculateErrors = (original: string, typed: string): number => {
-    const originalWords = original.trim().split(/\s+/);
-    const typedWords = `${typed}.`.trim().split(/\s+/);
-    let errors = 0;
-    for (
-      let i = 0;
-      i < Math.max(originalWords.length, typedWords.length);
-      i++
-    ) {
-      if (originalWords[i] !== typedWords[i]) {
-        console.log(originalWords[i], typedWords[i]);
-        errors++;
-      }
-    }
-    console.log(typedWords, originalWords);
-    return errors;
-  };
-
-  const handleTyping = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleTyping = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (!isTestActive) return;
 
     const value = e.target.value;
-    setTypedText(value);
+    setTypedText(prev => value);
+    
     // Auto-end test if sentence is completed
     if (value.trim() === currentSentence.trim()) {
-      endTest();
+      endRound(value);
     }
-  };
+  }, [isTestActive, currentSentence, endRound]);
 
+  // Username input component
   const usernameRef = useRef<HTMLInputElement>(null);
+  
+  const handleUsernameSubmit = useCallback(() => {
+    if (usernameRef.current?.value) {
+      setUsername(usernameRef.current.value);
+    }else{
+      toast.error('Please provide username.')
+    }
+  }, [setUsername]);
+
   if (!username) {
     return (
       <Card className="w-full max-w-md mx-auto">
@@ -208,13 +240,7 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
             }}
             ref={usernameRef}
           />
-          <Button
-            onClick={() => {
-              if (usernameRef.current && usernameRef.current.value) {
-                setUsername(usernameRef.current.value);
-              }
-            }}
-          >
+          <Button onClick={handleUsernameSubmit}>
             Submit
           </Button>
         </CardContent>
@@ -223,64 +249,70 @@ export default function SpeedTester({ sentences }: { sentences: any }) {
   }
 
   return (
-    <>
-      <Card className="w-full">
-        <CardHeader>
-          <CardDescription className="justify-self-end">
-            {`WPM: ${wpm}\t\t-\t\tAccuracy: ${accuracy}%`}
-          </CardDescription>
-          <CardTitle>Your text:</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <p
-            className={cn(
-              "text-lg w-fit ",
-              !isTestActive && "bg-black select-none"
-            )}
-          >
-            {currentSentence}
-          </p>
-          <div className="flex flex-row gap-4">
-            {!isTestOngoing ? (
-              <Button
-                onClick={startTest}
-                className="px-4 h-10 py-2 w-fit bg-blue-500 text-white rounded hover:bg-blue-600"
-              >
-                Start Test
-              </Button>
-            ) : (
-              <Input
-                ref={inputRef}
-                name="textInput"
-                value={typedText}
-                onChange={handleTyping}
-                placeholder="Start typing..."
-                className="text-lg h-10"
-              />
-            )}
-          </div>
-
+    <Card className="w-full">
+      <CardHeader>
+        <CardDescription className="flex justify-between items-center">
+          <span>WPM: {stats.wpm} | Accuracy: {stats.accuracy}% | Streak: {stats.streak}</span>
+        </CardDescription>
+        <CardTitle>Speed Typing Test</CardTitle>
+      </CardHeader>
+      
+      <CardContent className="flex flex-col gap-4">
+        <div 
+          className={cn(
+            "text-lg p-4 border rounded-lg bg-gray-50",
+            !isTestActive && "bg-gray-800 text-gray-800 select-none"
+          )}
+        >
+          {currentSentence}
+        </div>
+        
+        <div className="flex flex-row gap-4">
+          {!isTestOngoing ? (
+            <Button
+              onClick={startTest}
+              className="px-6 py-2"
+              disabled={!currentSentence}
+            >
+              Start Test
+            </Button>
+          ) : (
+            <Input
+              ref={inputRef}
+              name="textInput"
+              value={typedText}
+              onChange={handleTyping}
+              placeholder="Start typing..."
+              className="text-lg"
+              disabled={!isTestActive}
+            />
+          )}
+          
           <Button
-            disabled={!(isTestActive || isTestOngoing)}
+            disabled={!isTestOngoing}
             onClick={stopTest}
-            className="px-4 h-10 py-2 w-fit rounded"
-            variant={"destructive"}
+            variant="destructive"
+            className="px-6 py-2"
           >
             Stop Test
           </Button>
-        </CardContent>
-        <CardFooter className="flex justify-between">
-          <div className="text-sm text-gray-600">
+        </div>
+      </CardContent>
+      
+      <CardFooter className="flex justify-between items-center">
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <span className={isConnected ? "text-green-600" : "text-red-600"}>
             {isConnected ? "🟢 Connected" : "🔴 Disconnected"}
-          </div>
-          <div
-            className="w-8 h-8 relative flex justify-center items-center rounded-full p-2 border"
-            style={{ borderColor: getGradientColor(timer) }}
-          >
-            {timer}
-          </div>
-        </CardFooter>
-      </Card>
-    </>
+          </span>
+        </div>
+        
+        <div
+          className="w-12 h-12 flex justify-center items-center rounded-full border-2 font-mono font-bold"
+          style={{ borderColor: getGradientColor(timer) }}
+        >
+          {timer}
+        </div>
+      </CardFooter>
+    </Card>
   );
 }
