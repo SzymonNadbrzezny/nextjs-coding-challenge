@@ -27,11 +27,9 @@ interface SpeedTestRecord {
 interface UserStats {
   userId: string;
   username: string;
-  averageWpm: number;
-  averageAccuracy: number;
+  wpm: number;
+  accuracy: number;
   totalTests: number;
-  bestWpm: number;
-  bestAccuracy: number;
   lastTestDate: string;
   streak: number;
 }
@@ -87,7 +85,7 @@ app.prepare().then(() => {
     // Handle speed test results
     socket.on("speed-test-result", (data: any) => {
       const record: SpeedTestRecord = {
-        id: crypto.randomUUID(),
+        id: data.runId,
         userId: data.userId,
         username: data.username,
         wpm: data.wpm,
@@ -147,29 +145,22 @@ app.prepare().then(() => {
 
       if (existing) {
         existing.totalTests++;
-        existing.averageWpm =
-          (existing.averageWpm * (existing.totalTests - 1) + record.wpm) /
+        existing.wpm =
+          (existing.wpm * (existing.totalTests - 1) + record.wpm) /
           existing.totalTests;
-        existing.averageAccuracy =
-          (existing.averageAccuracy * (existing.totalTests - 1) +
+        existing.accuracy =
+          (existing.accuracy * (existing.totalTests - 1) +
             record.accuracy) /
           existing.totalTests;
-        existing.bestWpm = Math.max(existing.bestWpm, record.wpm);
-        existing.bestAccuracy = Math.max(
-          existing.bestAccuracy,
-          record.accuracy
-        );
         existing.lastTestDate = record.createdAt;
         existing.streak = record.streak;
       } else {
         userStatsMap.set(record.userId, {
           userId: record.userId,
           username: record.username,
-          averageWpm: record.wpm,
-          averageAccuracy: record.accuracy,
+          wpm: record.wpm,
+          accuracy: record.accuracy,
           totalTests: 1,
-          bestWpm: record.wpm,
-          bestAccuracy: record.accuracy,
           lastTestDate: record.createdAt,
           streak: record.streak,
         });
@@ -178,7 +169,7 @@ app.prepare().then(() => {
 
     // Convert to array and sort by average WPM
     return Array.from(userStatsMap.values())
-      .sort((a, b) => b.averageWpm - a.averageWpm)
+      .sort((a, b) => b.accuracy - a.accuracy)
       .slice(0, 10);
   }
 
@@ -194,11 +185,7 @@ app.prepare().then(() => {
       (sum, record) => sum + record.accuracy,
       0
     );
-    const bestWpm = Math.max(...userRecords.map((record) => record.wpm));
     const bestStreak = Math.max(...userRecords.map((record) => record.streak));
-    const bestAccuracy = Math.max(
-      ...userRecords.map((record) => record.accuracy)
-    );
     const lastTestDate = userRecords.sort(
       (a, b) =>
         
@@ -208,11 +195,9 @@ app.prepare().then(() => {
     return {
       userId,
       username: userRecords[0].username,
-      averageWpm: totalWpm / userRecords.length,
-      averageAccuracy: totalAccuracy / userRecords.length,
+      wpm: totalWpm / userRecords.length,
+      accuracy: totalAccuracy / userRecords.length,
       totalTests: userRecords.length,
-      bestWpm,
-      bestAccuracy,
       lastTestDate,
       streak: bestStreak,
     };
