@@ -19,6 +19,6 @@ Game playes in rounds. Each round is 1 sentence and lasts predefined time (10s b
 Players can stop playing at any point, but once they resume they'll loose their statistics ( wpm, accuracy and streak).
 
 # Testing
-
+Due to how I setup server-side storage, the server needs to be restarted when testing game logic. When using database it would not be required, since it would be API call.
 I used playwright to test storage and game logic.
 Those are not full tests, but they do work. I did however realize I need to spend more time writing tests since I'm out of practice and it took me way longer than it should.
