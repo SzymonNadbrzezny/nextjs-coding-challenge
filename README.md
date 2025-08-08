@@ -1,36 +1,24 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Realtime
+Biggest decision by far. I have not worked with realtime API that much yet, but I've chosen websockets. It requires modyfing server, due to this it's not suitable to all deployement enviroments (Vercel doesn't work with ws).
 
-## Getting Started
+Here instead live progress (for example current word) I decided to use streak. It shows how many sentences users have done without error, which I think will make it a little bit more compepetitve.
 
-First, run the development server:
+## Storage of test/user data
+We need to store test and user data, but also not require user to repeat it withing the same browser session.
+For server-side storage I decided to use AI to create in-memory storage. While the server is running it'll have 1 leaderboard.
+For client-side data I used zustand with persiting stores that save data to `sessionStorage`. We only need to save username and userId here.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Game logic
+The game requires timer, list of predefined sentences and error-checking.
+To save on time I used AI for basic timer and error detection and modified results to my satisfaction. Added streak logic, round logic 
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+We need to keep track of the time user has left, their typed words and their score.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Game playes in rounds. Each round is 1 sentence and lasts predefined time (10s by default). After ending the round there's 5 seconds before new rounds start.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Players can stop playing at any point, but once they resume they'll loose their statistics ( wpm, accuracy and streak).
 
-## Learn More
+# Testing
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+I used playwright to test storage and game logic.
+Those are not full tests, but they do work. I did however realize I need to spend more time writing tests since I'm out of practice and it took me way longer than it should.
